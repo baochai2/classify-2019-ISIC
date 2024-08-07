@@ -86,6 +86,8 @@ model = create_model()
 def scheduler(epoch, lr):
      if epoch > 20:
           return lr * 0.99
+     else:
+          return lr
 lr_scheduler = keras.callbacks.LearningRateScheduler(scheduler)
 
 # 精度控制
@@ -108,6 +110,6 @@ model.fit(
      ds_train,
      epochs=50,
      validation_data=ds_validation,
-     callbacks=[lr_scheduler, CustomCallback],
+     callbacks=[lr_scheduler, CustomCallback()],
      verbose=2
 )
