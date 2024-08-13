@@ -6,110 +6,81 @@ import tensorflow as tf
 import pandas as pd
 import keras
 
-from utils_for_clsfy_skin_cancer import encode_age, encode_site, encode_sex
-from utils_for_clsfy_skin_cancer import parse_label
-from utils_for_clsfy_skin_cancer import preprocess_train_data, preprocess_validation_data
-from utils_for_clsfy_skin_cancer import create_model
 from utils_for_clsfy_skin_cancer import dir
-from utils_for_clsfy_skin_cancer import train_data_fn, train_label_fn, train_input_dir
+from utils_for_clsfy_skin_cancer import train_label_fn, train_input_dir
 from utils_for_clsfy_skin_cancer import train_cache_dir, validation_cache_dir
+from utils_for_clsfy_skin_cancer import parse_label
+from utils_for_clsfy_skin_cancer import create_model
+from utils_for_clsfy_skin_cancer import lr_scheduler, CustomCallback
+from utils_for_clsfy_skin_cancer import train_model_in_batches
+
+
+# 配置GPU
+physical_devices = tf.config.list_physical_devices('GPU')
+print(physical_devices[0])
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
 # 超参数
+TRAIN_VALIDATION_RATE = 0.9
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-BATCH_SIZE = 32
+LEARNING_RATE = 1e-4
+BATCH_SIZE = 64
+EPOCHS = 50
 
 
 # 确保缓存路径
-if not os.path.exists(train_cache_dir):
-     os.makedirs(train_cache_dir)
-
-if not os.path.exists(validation_cache_dir):
-     os.makedirs(validation_cache_dir)
+for cache in [train_cache_dir, validation_cache_dir]:
+     if not os.path.exists(cache):
+          os.makedirs(cache)
 
 
 # 清理锁文件
 train_lockfile_fp = os.path.join(train_cache_dir, '_0.lockfile')
-if os.path.exists(train_lockfile_fp):
-     os.remove(train_lockfile_fp)
-
 validation_lockfile_fp = os.path.join(validation_cache_dir, '_0.lockfile')
-if os.path.exists(validation_lockfile_fp):
-     os.remove(validation_lockfile_fp)
+for lockfile in [train_lockfile_fp, validation_lockfile_fp]:
+     if os.path.exists(lockfile):
+          os.remove(lockfile)
 
 
 # 读取数据
-df_data = pd.read_csv(os.path.join(dir, train_data_fn))
 df_label = pd.read_csv(os.path.join(dir, train_label_fn))
 
 
 # 提取数据特征
-train_image_fp = df_data['image']\
+train_image_fp = df_label['image']\
     .apply(lambda x: os.path.join(dir, train_input_dir, x + '.jpg')).values  # 病变图像路径
-train_age = encode_age(df_data)  # 年龄
-train_site = encode_site(df_data)  # 病变部位
-train_sex = encode_sex(df_data)  # 性别
 train_label = parse_label(df_label)  # 病种
 
 
 # 划分训练集 验证集
-ds = tf.data.Dataset.from_tensor_slices(
-    (train_image_fp, train_age, train_site, train_sex, train_label)
-)
+ds_size = len(train_image_fp)
+train_size = int(ds_size * TRAIN_VALIDATION_RATE)
 
-ds_size = len(ds)
-train_size = int(ds_size * 0.9)
-
-ds_train = ds.take(train_size)
-ds_validation = ds.skip(train_size)
-
-
-# 预处理
-ds_train = ds_train.map(preprocess_train_data, num_parallel_calls=AUTOTUNE)
-ds_train = ds_train.cache(train_cache_dir)
-ds_train = ds_train.shuffle(5000)
-ds_train = ds_train.batch(BATCH_SIZE)
-ds_train = ds_train.prefetch(AUTOTUNE)
-
-ds_validation = ds_validation.map(preprocess_validation_data, num_parallel_calls=AUTOTUNE)
-ds_validation = ds_validation.cache(validation_cache_dir)
-ds_validation = ds_validation.batch(BATCH_SIZE)
-ds_validation = ds_validation.prefetch(AUTOTUNE)
+train_image_fp, validation_image_fp = train_image_fp[:train_size], train_image_fp[train_size:]
+train_label, validation_label = train_label[:train_size], train_label[train_size:]
 
 
 # 初始化模型
 model = create_model()
 
 
-# 回调
-# 调整学习率
-def scheduler(epoch, lr):
-     if epoch > 20:
-          return lr * 0.99
-     else:
-          return lr
-lr_scheduler = keras.callbacks.LearningRateScheduler(scheduler)
-
-# 精度控制
-class CustomCallback(keras.callbacks.Callback):
-     def on_epoch_end(self, epoch, logs=None):
-          if logs.get['accuracy'] > 0.9:
-               self.model.stop_training = True
-
-
 # 配置模型的学习过程,定义模型在训练时使用的损失函数 优化器和评估指标
 model.compile(
-     loss=keras.losses.SparseCategoricalCrossentropy(),
-     optimizer=keras.optimizers.Adam(learning_rate=0.01),
-     metrics=['accuracy']
+    loss=keras.losses.SparseCategoricalCrossentropy(),
+    optimizer=keras.optimizer_v2.adam.Adam(learning_rate=LEARNING_RATE),
+    metrics=['accuracy']
 )
 
 
 # 训练数据
-model.fit(
-     ds_train,
-     epochs=50,
-     validation_data=ds_validation,
-     callbacks=[lr_scheduler, CustomCallback()],
-     verbose=2
+train_model_in_batches(
+    model,
+    train_image_fp,
+    train_label,
+    validation_image_fp,
+    validation_label,
+    batch_size=BATCH_SIZE,
+    epochs=EPOCHS,
+    callbacks=[lr_scheduler, CustomCallback()]
 )
