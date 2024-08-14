@@ -6,9 +6,10 @@ import tensorflow as tf
 import pandas as pd
 import keras
 
-from utils_for_clsfy_skin_cancer import dir
-from utils_for_clsfy_skin_cancer import train_label_fn, train_input_dir
+from utils_for_clsfy_skin_cancer import directory
+from utils_for_clsfy_skin_cancer import train_data_fn, train_label_fn, train_input_dir
 from utils_for_clsfy_skin_cancer import train_cache_dir, validation_cache_dir
+from utils_for_clsfy_skin_cancer import encode_age, encode_site, encode_sex
 from utils_for_clsfy_skin_cancer import parse_label
 from utils_for_clsfy_skin_cancer import create_model
 from utils_for_clsfy_skin_cancer import lr_scheduler, CustomCallback
@@ -25,7 +26,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 TRAIN_VALIDATION_RATE = 0.9
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 LEARNING_RATE = 1e-4
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 EPOCHS = 50
 
 
@@ -44,12 +45,16 @@ for lockfile in [train_lockfile_fp, validation_lockfile_fp]:
 
 
 # 读取数据
-df_label = pd.read_csv(os.path.join(dir, train_label_fn))
+df_data = pd.read_csv(os.path.join(directory, train_data_fn))
+df_label = pd.read_csv(os.path.join(directory, train_label_fn))
 
 
 # 提取数据特征
-train_image_fp = df_label['image']\
-    .apply(lambda x: os.path.join(dir, train_input_dir, x + '.jpg')).values  # 病变图像路径
+train_image_fp = df_data['image']\
+    .apply(lambda x: os.path.join(directory, train_input_dir, x + '.jpg')).values  # 病变图像路径
+train_age = encode_age(df_data)  # 年龄
+train_site = encode_site(df_data)  # 病变部位
+train_sex = encode_sex(df_data)  # 性别
 train_label = parse_label(df_label)  # 病种
 
 
@@ -58,6 +63,9 @@ ds_size = len(train_image_fp)
 train_size = int(ds_size * TRAIN_VALIDATION_RATE)
 
 train_image_fp, validation_image_fp = train_image_fp[:train_size], train_image_fp[train_size:]
+train_age, validation_age = train_age[:train_size], train_age[train_size:]
+train_site, validation_site = train_site[:train_size], train_site[train_size:]
+train_sex, validation_sex = train_sex[:train_size], train_sex[train_size:]
 train_label, validation_label = train_label[:train_size], train_label[train_size:]
 
 
@@ -76,9 +84,9 @@ model.compile(
 # 训练数据
 train_model_in_batches(
     model,
-    train_image_fp,
+    [train_image_fp, train_age, train_site, train_sex],
     train_label,
-    validation_image_fp,
+    [validation_image_fp, validation_age, train_site, train_sex],
     validation_label,
     batch_size=BATCH_SIZE,
     epochs=EPOCHS,
