@@ -9,6 +9,7 @@ import keras
 from utils_for_clsfy_skin_cancer import directory
 from utils_for_clsfy_skin_cancer import train_data_fn, train_label_fn, train_input_dir
 from utils_for_clsfy_skin_cancer import train_cache_dir, validation_cache_dir
+from utils_for_clsfy_skin_cancer import ensure_cache_dir, clean_lockfile
 from utils_for_clsfy_skin_cancer import encode_age, encode_site, encode_sex
 from utils_for_clsfy_skin_cancer import parse_label
 from utils_for_clsfy_skin_cancer import create_model
@@ -31,17 +32,13 @@ EPOCHS = 50
 
 
 # 确保缓存路径
-for cache in [train_cache_dir, validation_cache_dir]:
-     if not os.path.exists(cache):
-          os.makedirs(cache)
+ensure_cache_dir([train_cache_dir, validation_cache_dir])
 
 
 # 清理锁文件
 train_lockfile_fp = os.path.join(train_cache_dir, '_0.lockfile')
 validation_lockfile_fp = os.path.join(validation_cache_dir, '_0.lockfile')
-for lockfile in [train_lockfile_fp, validation_lockfile_fp]:
-     if os.path.exists(lockfile):
-          os.remove(lockfile)
+clean_lockfile([train_lockfile_fp, validation_lockfile_fp])
 
 
 # 读取数据

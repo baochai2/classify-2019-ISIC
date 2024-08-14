@@ -69,6 +69,20 @@ label_names = [
 ]
 
 
+# 确保缓存路径
+def ensure_cache_dir(all_cache_dir):
+    for cache_dir in all_cache_dir:
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+
+
+# 清理锁文件
+def clean_lockfile(all_lockfile_fp):
+    for lockfile in all_lockfile_fp:
+        if os.path.exists(lockfile):
+            os.remove(lockfile)
+
+
 # 编码未处理的数据特征
 def encode_age(dataframe):
     age = np.array([], dtype='float64')  # 初始化存储特征的列表
