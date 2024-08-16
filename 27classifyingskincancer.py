@@ -6,6 +6,8 @@ import tensorflow as tf
 import pandas as pd
 import keras
 
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
+
 from utils_for_clsfy_skin_cancer import directory
 from utils_for_clsfy_skin_cancer import train_data_fn, train_label_fn, train_input_dir
 from utils_for_clsfy_skin_cancer import train_cache_dir, validation_cache_dir
@@ -23,11 +25,17 @@ print(physical_devices[0])
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
+# 使用半精度训练
+policy = mixed_precision.Policy('mixed_float16')
+mixed_precision.set_policy(policy)
+
+
 # 超参数
 TRAIN_VALIDATION_RATE = 0.9
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-5
 BATCH_SIZE = 32
+VALIDATION_BATCH_SIZE = 32
 EPOCHS = 50
 
 
@@ -44,6 +52,11 @@ clean_lockfile([train_lockfile_fp, validation_lockfile_fp])
 # 读取数据
 df_data = pd.read_csv(os.path.join(directory, train_data_fn))
 df_label = pd.read_csv(os.path.join(directory, train_label_fn))
+
+
+# 打乱数据
+df_data = df_data.sample(frac=1, random_state=42).reset_index(drop=True)
+df_label = df_label.sample(frac=1, random_state=42).reset_index(drop=True)
 
 
 # 提取数据特征
@@ -86,6 +99,7 @@ train_model_in_batches(
     [validation_image_fp, validation_age, train_site, train_sex],
     validation_label,
     batch_size=BATCH_SIZE,
+    validation_batch_size=VALIDATION_BATCH_SIZE,
     epochs=EPOCHS,
     callbacks=[lr_scheduler, CustomCallback()]
 )

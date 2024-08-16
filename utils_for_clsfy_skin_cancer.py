@@ -12,10 +12,11 @@ from keras import layers, regularizers
 
 
 # 超参数
-HEIGHT = 400
-WIDTH = 400
+HEIGHT = 300
+WIDTH = 300
 CHANNEL = 3
-AUTOTUNE = tf.data.experimental.AUTOTUNE
+NUM_KERNELS = 400
+NUM_DENSE_UNITS = 128
 VERBOSE_MODE = 0
 
 
@@ -141,20 +142,23 @@ def augment(image):
     image = tf.image.random_flip_up_down(image)
     return image
 
-def ensure_data(data):
-    assert data.dtype == tf.float64, f"Image dtype is not tf.float32, but {data.dtype}"
-    assert data.shape == (HEIGHT, WIDTH, CHANNEL + 3),\
-        f"Image shape is not ({HEIGHT}, {WIDTH}, {CHANNEL + 3}), but {data.shape}"
-
 # 融合数据
 def merge(image, age, site, sex):
-    age = tf.broadcast_to(tf.reshape(age, [1, 1, 1]), [HEIGHT, WIDTH, 1])
-    site = tf.broadcast_to(tf.reshape(site, [1, 1, 1]), [HEIGHT, WIDTH, 1])
-    sex = tf.broadcast_to(tf.reshape(sex, [1, 1, 1]), [HEIGHT, WIDTH, 1])
+    age = tf.broadcast_to(tf.reshape(age, [1, 1, 1]), [HEIGHT, WIDTH // 4, 1])
+    site = tf.broadcast_to(tf.reshape(site, [1, 1, 1]), [HEIGHT, WIDTH // 2, 1])
+    sex = tf.broadcast_to(tf.reshape(sex, [1, 1, 1]), [HEIGHT, WIDTH // 4, 1])
 
-    data = tf.concat([image, age, site, sex], axis=-1)
+    data = tf.concat([age, site, sex], axis=-2)
+    data = tf.concat([image, data], axis=-1)
     return data
 
+# 确保数据格式
+def ensure_data(data):
+    assert data.dtype == tf.float64, f"data dtype is not tf.float64, but {data.dtype}"
+    assert data.shape == (HEIGHT, WIDTH, CHANNEL + 1),\
+        f"Data shape is not ({HEIGHT}, {WIDTH}, {CHANNEL + 1}), but {data.shape}"
+
+# 构建输入
 def build_inputs(data):
     inputs = {
         'data_input': data
@@ -184,40 +188,42 @@ def preprocess_validation_data(data, label):
 # 构建模型
 def create_model():
 
-    # 图像输入
-    data_inputs = keras.Input(shape=(HEIGHT, WIDTH, CHANNEL + 3), name='data_input')
+    # 输入
+    data_inputs = keras.Input(shape=(HEIGHT, WIDTH, CHANNEL + 1), name='data_input')
     x = layers.Conv2D(
-        int(HEIGHT / 16), 7, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
+        NUM_KERNELS // 8, 7, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
     )(data_inputs)
-    x = layers.AveragePooling2D()(x)
+    x = layers.MaxPooling2D()(x)
     x = layers.Conv2D(
-        int(HEIGHT / 8), 7, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
+        NUM_KERNELS // 4, 7, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
     )(x)
-    x = layers.AveragePooling2D()(x)
+    x = layers.MaxPooling2D()(x)
     x = layers.Conv2D(
-        int(HEIGHT / 8), 7, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
+        NUM_KERNELS // 4, 7, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
     )(x)
-    x = layers.AveragePooling2D()(x)
+    x = layers.MaxPooling2D()(x)
     x = layers.Conv2D(
-        int(HEIGHT / 4), 5, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
+        NUM_KERNELS // 2, 5, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
     )(x)
-    x = layers.AveragePooling2D()(x)
+    x = layers.MaxPooling2D()(x)
     x = layers.Conv2D(
-        int(HEIGHT / 4), 5, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
+        NUM_KERNELS // 2, 5, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
     )(x)
-    x = layers.AveragePooling2D()(x)
+    x = layers.MaxPooling2D()(x)
     x = layers.Conv2D(
-        int(HEIGHT / 2), 5, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
+        NUM_KERNELS, 5, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
     )(x)
-    x = layers.AveragePooling2D()(x)
+    x = layers.MaxPooling2D()(x)
     x = layers.Conv2D(
-        int(HEIGHT) / 2, 3, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
+        NUM_KERNELS, 3, padding='same', activation='relu', kernel_regularizer=regularizers.l2(0.01)
     )(x)
-    x = layers.Flatten()(x)
-    x = layers.Dense(int(HEIGHT / 4), activation='relu', kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dense(int(HEIGHT / 8), activation='relu', kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(NUM_DENSE_UNITS, activation='relu', kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.Dense(NUM_DENSE_UNITS // 2, activation='relu', kernel_regularizer=regularizers.l2(0.01))(x)
     x = layers.Dropout(0.5)(x)
-    x = layers.Dense(int(HEIGHT / 16), activation='relu', kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.Dense(NUM_DENSE_UNITS // 4, activation='relu', kernel_regularizer=regularizers.l2(0.01))(x)
+
+    # 输出
     outputs = layers.Dense(len(label_names), activation='softmax')(x)
     model = keras.Model(inputs={'data_input': data_inputs}, outputs=outputs)
     return model
@@ -226,7 +232,7 @@ def create_model():
 # 回调
 # 调整学习率
 def scheduler(epoch, lr):
-     if epoch > 3:
+     if epoch > 2:
           return lr * 0.99
      else:
           return lr
@@ -247,10 +253,12 @@ def train_model_in_batches(
         validation_datas,
         validation_labels,
         batch_size,
+        validation_batch_size,
         epochs,
         callbacks
 ):
     num_batches = len(train_labels) // batch_size
+    num_val_batches = len(validation_labels) // validation_batch_size
 
     # 为每个回调类设定模型
     for callback in callbacks:
@@ -303,18 +311,39 @@ def train_model_in_batches(
         print(f'Train Loss: {epoch_loss:.4f}, Train Accuracy: {epoch_accuracy:.4f}')
 
         # 将验证集转为numpy数组
-        # val_inputs, val_targets = [], []
-        # for val_data, val_label in zip(validation_datas, validation_labels):
-        #     val_data, val_label = preprocess_validation_data(val_data, val_label)
-        #     val_inputs.append(val_data['data_input'].numpy())
-        #     val_targets.append(val_label)
+        val_loss, val_accuracy = 0, 0
+        val_inputs, val_targets = [], []
+        for i in range(num_val_batches):
+            val_batch_start = i * validation_batch_size
+            val_batch_end = (i + 1) * validation_batch_size
 
-        # val_inputs = np.array(val_inputs)
-        # val_targets = np.array(val_targets)
+            val_batch_data = tuple([data[val_batch_start: val_batch_end] for data in validation_datas])
+            val_batch_label = validation_labels[val_batch_start: val_batch_end]
 
-        # # 计算验证集的loss和accuracy
-        # val_loss, val_accuracy = model.evaluate(val_inputs, val_targets, verbose=VERBOSE_MODE)
-        # print(f'Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}')
+            val_datas, val_labels = [], val_batch_label
+            for image, age, site, sex in zip(*val_batch_data):
+                processed_val_datas, _ = \
+                    preprocess_validation_data((image, age, site, sex), val_batch_label)
+                val_datas.append(processed_val_datas)
+
+            val_inputs, val_targets = [], []
+            for inputs, targets in zip(val_datas, val_labels):
+                val_inputs.append(inputs['data_input'].numpy())
+                val_targets.append(targets)
+
+            val_inputs = np.array(val_inputs)
+            val_targets = np.array(val_targets)
+
+            val_batch_loss, val_batch_accuracy= \
+                model.evaluate(val_inputs, val_targets, verbose=VERBOSE_MODE)
+            
+            val_loss += val_batch_loss
+            val_accuracy += val_batch_accuracy
+
+        # 计算验证集的loss和accuracy
+        val_loss /= num_val_batches
+        val_accuracy /= num_val_batches
+        print(f'Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}')
 
         # 调用精度调整器
         for callback in callbacks:
