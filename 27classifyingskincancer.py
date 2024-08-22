@@ -1,28 +1,31 @@
 import os
+import logging
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+logging.basicConfig(level=logging.ERROR)
 
-import tensorflow as tf
 import pandas as pd
-import keras
+import numpy as np
 
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
+from sklearn.utils.class_weight import compute_class_weight
 
-from utils_for_clsfy_skin_cancer import directory
-from utils_for_clsfy_skin_cancer import train_data_fn, train_label_fn, train_input_dir
-from utils_for_clsfy_skin_cancer import train_cache_dir, validation_cache_dir
-from utils_for_clsfy_skin_cancer import ensure_cache_dir, clean_lockfile
-from utils_for_clsfy_skin_cancer import encode_age, encode_site, encode_sex
-from utils_for_clsfy_skin_cancer import parse_label
-from utils_for_clsfy_skin_cancer import create_model
-from utils_for_clsfy_skin_cancer import lr_scheduler, CustomCallback
-from utils_for_clsfy_skin_cancer import train_model_in_batches
+from utils_for_clsfy_skin_cancer import (
+    configure_GPU,
+    directory, data_dir,
+    train_data_fn, train_label_fn, train_input_dir,
+    checkpoint_dir, tensorboard_dir,
+    saved_model_dir,
+    ensure_dir,
+    encode_age, encode_site, encode_sex,
+    parse_label,
+    lr_scheduler, AccuracyCallback, EarlyStoppingCallback, save_callback, tensorboard_callback,
+    SkinCancerModel
+)
 
 
 # 配置GPU
-physical_devices = tf.config.list_physical_devices('GPU')
-print(physical_devices[0])
-tf.config.experimental.set_memory_growth(physical_devices[0], True)
+configure_GPU()
 
 
 # 使用半精度训练
@@ -32,26 +35,24 @@ mixed_precision.set_policy(policy)
 
 # 超参数
 TRAIN_VALIDATION_RATE = 0.9
-AUTOTUNE = tf.data.experimental.AUTOTUNE
-LEARNING_RATE = 1e-5
 BATCH_SIZE = 32
 VALIDATION_BATCH_SIZE = 32
-EPOCHS = 50
+EPOCHS = 40
 
 
-# 确保缓存路径
-ensure_cache_dir([train_cache_dir, validation_cache_dir])
-
-
-# 清理锁文件
-train_lockfile_fp = os.path.join(train_cache_dir, '_0.lockfile')
-validation_lockfile_fp = os.path.join(validation_cache_dir, '_0.lockfile')
-clean_lockfile([train_lockfile_fp, validation_lockfile_fp])
+# 确保路径
+ensure_dir(
+    [
+        os.path.join(directory, checkpoint_dir),
+        os.path.join(directory, tensorboard_dir),
+        os.path.join(directory, saved_model_dir)
+    ]
+)
 
 
 # 读取数据
-df_data = pd.read_csv(os.path.join(directory, train_data_fn))
-df_label = pd.read_csv(os.path.join(directory, train_label_fn))
+df_data = pd.read_csv(os.path.join(directory, data_dir, train_data_fn))
+df_label = pd.read_csv(os.path.join(directory, data_dir, train_label_fn))
 
 
 # 打乱数据
@@ -61,7 +62,7 @@ df_label = df_label.sample(frac=1, random_state=42).reset_index(drop=True)
 
 # 提取数据特征
 train_image_fp = df_data['image']\
-    .apply(lambda x: os.path.join(directory, train_input_dir, x + '.jpg')).values  # 病变图像路径
+    .apply(lambda x: os.path.join(directory, data_dir, train_input_dir, x + '.jpg')).values  # 病变图像路径
 train_age = encode_age(df_data)  # 年龄
 train_site = encode_site(df_data)  # 病变部位
 train_sex = encode_sex(df_data)  # 性别
@@ -79,27 +80,36 @@ train_sex, validation_sex = train_sex[:train_size], train_sex[train_size:]
 train_label, validation_label = train_label[:train_size], train_label[train_size:]
 
 
+# 计算标签权重
+train_labels = np.array(train_label)
+computed_weights = compute_class_weight('balanced', classes=np.unique(train_label), y=train_label)
+class_weight = {i: computed_weights[i] for i in range(len(computed_weights))}
+
+
 # 初始化模型
-model = create_model()
-
-
-# 配置模型的学习过程,定义模型在训练时使用的损失函数 优化器和评估指标
-model.compile(
-    loss=keras.losses.SparseCategoricalCrossentropy(),
-    optimizer=keras.optimizer_v2.adam.Adam(learning_rate=LEARNING_RATE),
-    metrics=['accuracy']
-)
+model = SkinCancerModel()
 
 
 # 训练数据
-train_model_in_batches(
-    model,
+model.train(
     [train_image_fp, train_age, train_site, train_sex],
     train_label,
-    [validation_image_fp, validation_age, train_site, train_sex],
+    [validation_image_fp, validation_age, validation_site, validation_sex],
     validation_label,
     batch_size=BATCH_SIZE,
     validation_batch_size=VALIDATION_BATCH_SIZE,
     epochs=EPOCHS,
-    callbacks=[lr_scheduler, CustomCallback()]
+    class_weight=class_weight,
+    callbacks=
+    [
+        lr_scheduler,
+        AccuracyCallback(),
+        EarlyStoppingCallback(monitor='val_accuracy', mode='max', patience=10),
+        save_callback,
+        tensorboard_callback
+    ]
 )
+
+
+# 保存模型
+model.save_model(os.path.join(directory, saved_model_dir, 'completed_model.keras'))
