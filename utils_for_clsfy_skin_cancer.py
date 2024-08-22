@@ -115,7 +115,7 @@ def encode_site(dataframe):
 
 def encode_sex(dataframe):
     sex = np.array([0 if pd.isna(row) else (1 if row == 'male' else 2) 
-                    for row in dataframe['sex']])
+                    for row in dataframe['sex']], dtype='float64')
     mean = np.mean(sex)
     std = np.std(sex)
     sex = (sex - mean) / std
@@ -199,6 +199,9 @@ def preprocess_validation_data(data, label):
     ensure_data(data)
     inputs = build_inputs(data)
     return inputs, label
+
+def preprocess_test_data(data, label):
+    return preprocess_validation_data(data, label)
 
 
 # 构建模型
@@ -538,7 +541,7 @@ class SkinCancerModel:
             test_data = []
             for image, age, site, sex in zip(*test_batch_data):
                 processed_test_datas, _ = \
-                    preprocess_validation_data((image, age, site, sex), None)
+                    preprocess_test_data((image, age, site, sex), None)
                 test_data.append(processed_test_datas)
 
             test_inputs = []
