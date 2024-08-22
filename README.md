@@ -27,10 +27,19 @@ The project aims to **classify** types of **skin cancer** and **predict** which 
       └── ISIC_2019_Test_Metadata.csv
       ```
 
+## 2. Environment
+### 2.1 Package Version
+  Python=3.9
+  Tensorflow=2.6.0
+  CUDA=11.2
+  cuDNN=8.1
+  Keras=2.6.0
+  Pandas=1.1.3
+  Numpy=1.19.5
 
-## 2. Label Interpretion
+## 3. Label Interpretion
 
-### 2.1 ISIC_2019_Training_Metadata.csv
+### 3.1 ISIC_2019_Training_Metadata.csv
 
 -  **image**: 图像的唯一标识符
 
@@ -42,7 +51,7 @@ The project aims to **classify** types of **skin cancer** and **predict** which 
 
 -  **sex**: 病人的性别
 
-#### 2.1.1 anatom_site_general
+#### 3.1.1 anatom_site_general
 
 -  **NaN**：缺失值，表示没有记录具体的解剖部位信息
 
@@ -62,7 +71,7 @@ The project aims to **classify** types of **skin cancer** and **predict** which 
 
 -  **upper extremity**：上肢，包括肩膀、手臂、前臂和手
 
-### 2.2 ISIC_2019_Training_GroundTruth.csv
+### 3.2 ISIC_2019_Training_GroundTruth.csv
 
 -  **MEL**: Melanoma（黑色素瘤）
 
