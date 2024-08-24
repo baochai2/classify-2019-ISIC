@@ -24,6 +24,7 @@ from utils_for_clsfy_skin_cancer import (
 )
 
 
+
 # 配置GPU
 configure_GPU()
 
