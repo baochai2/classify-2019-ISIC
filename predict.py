@@ -4,7 +4,6 @@ import logging
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 logging.basicConfig(level=logging.ERROR)
 
-import tensorflow as tf
 import pandas as pd
 
 from utils_for_clsfy_skin_cancer import (
@@ -15,6 +14,7 @@ from utils_for_clsfy_skin_cancer import (
     encode_age, encode_site, encode_sex,
     SkinCancerModel
 )
+
 
 
 # 配置GPU
