@@ -1,0 +1,60 @@
+
+Epoch 1/40
+Train Loss: 3.3539, Train Accuracy: 0.2723, Train top-k Accuracy: 0.7552
+Validation Loss: 1.8015, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 1 takes 571.51 seconds
+
+Epoch 2/40
+Train Loss: 2.4723, Train Accuracy: 0.2554, Train top-k Accuracy: 0.7491
+Validation Loss: 1.7903, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 2 takes 573.67 seconds
+
+Epoch 3/40
+Train Loss: 2.2360, Train Accuracy: 0.2641, Train top-k Accuracy: 0.7540
+Validation Loss: 1.8643, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 3 takes 576.48 seconds
+
+Epoch 4/40
+Train Loss: 2.0921, Train Accuracy: 0.2584, Train top-k Accuracy: 0.7516
+Validation Loss: 1.8737, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 4 takes 579.21 seconds
+
+Epoch 5/40
+Train Loss: 2.0191, Train Accuracy: 0.2599, Train top-k Accuracy: 0.7551
+Validation Loss: 1.8775, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 5 takes 574.79 seconds
+
+Epoch 6/40
+Train Loss: 2.0564, Train Accuracy: 0.2548, Train top-k Accuracy: 0.7535
+Validation Loss: 1.8726, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 6 takes 574.08 seconds
+
+Epoch 7/40
+Train Loss: 2.0091, Train Accuracy: 0.2604, Train top-k Accuracy: 0.7535
+Validation Loss: 1.8761, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 7 takes 575.38 seconds
+
+Epoch 8/40
+Train Loss: 1.9917, Train Accuracy: 0.2614, Train top-k Accuracy: 0.7544
+Validation Loss: 1.8685, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 8 takes 577.40 seconds
+
+Epoch 9/40
+Train Loss: 2.0164, Train Accuracy: 0.2571, Train top-k Accuracy: 0.7558
+Validation Loss: 1.8658, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 9 takes 576.71 seconds
+
+Epoch 10/40
+Train Loss: 2.0197, Train Accuracy: 0.2559, Train top-k Accuracy: 0.7496
+Validation Loss: 1.8560, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 10 takes 575.77 seconds
+
+Epoch 11/40
+Train Loss: 2.0304, Train Accuracy: 0.2627, Train top-k Accuracy: 0.7525
+Validation Loss: 1.8712, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 11 takes 577.14 seconds
+
+Epoch 12/40
+Train Loss: 2.0166, Train Accuracy: 0.2526, Train top-k Accuracy: 0.7543
+Validation Loss: 1.8431, Validation Accuracy: 0.0992, Validation top-k Accuracy: 0.7901
+Epoch 12 takes 575.54 seconds

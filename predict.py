@@ -7,10 +7,13 @@ logging.basicConfig(level=logging.ERROR)
 import pandas as pd
 
 from utils_for_clsfy_skin_cancer import (
-    configure_GPU,
+    NUM_K,
     directory, data_dir,
     test_data_fn, test_input_dir,
     saved_model_dir,
+    output_dir,
+    configure_GPU,
+    ensure_dir,
     encode_age, encode_site, encode_sex,
     SkinCancerModel
 )
@@ -23,6 +26,14 @@ configure_GPU()
 
 # 超参数
 TEST_BATCH_SIZE = 128
+
+
+# 确保路径
+ensure_dir(
+    [
+        os.path.join(directory, output_dir)
+    ]
+)
 
 
 # 读取文件
@@ -43,7 +54,15 @@ model.load_model(os.path.join(directory, saved_model_dir, 'completed_model.keras
 
 
 # 预测标签值
-model.predict(
+predictions = model.predict(
     [test_image_fp, test_age, test_site, test_sex],
     test_batch_size=TEST_BATCH_SIZE
 )
+
+
+# 写入csv文件
+predictions = pd.DataFrame(predictions, columns=[f'Top{i + 1}' for i in range(NUM_K)])
+predictions.insert(0, 'image', test_data['image'])
+predictions_file = os.path.join(directory, output_dir, 'predictions.csv')
+predictions.to_csv(predictions_file, index=False)
+print(f'Predictions saved to {predictions_file}\n')

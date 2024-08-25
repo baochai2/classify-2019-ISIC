@@ -11,15 +11,16 @@ from tensorflow.keras.mixed_precision import experimental as mixed_precision
 from sklearn.utils.class_weight import compute_class_weight
 
 from utils_for_clsfy_skin_cancer import (
-    configure_GPU,
     directory, data_dir,
     train_data_fn, train_label_fn, train_input_dir,
     checkpoint_dir, tensorboard_dir,
     saved_model_dir,
+    configure_GPU,
     ensure_dir,
     encode_age, encode_site, encode_sex,
     parse_label,
-    lr_scheduler, AccuracyCallback, EarlyStoppingCallback, save_callback, tensorboard_callback,
+    reduce_lr, AccuracyCallback, EarlyStoppingCallback,
+    save_callback, tensorboard_callback,
     SkinCancerModel
 )
 
@@ -29,7 +30,7 @@ from utils_for_clsfy_skin_cancer import (
 configure_GPU()
 
 
-# 使用半精度训练
+# 使用混合精度训练
 policy = mixed_precision.Policy('mixed_float16')
 mixed_precision.set_policy(policy)
 
@@ -103,9 +104,9 @@ model.train(
     class_weight=class_weight,
     callbacks=
     [
-        lr_scheduler,
+        reduce_lr,
         AccuracyCallback(),
-        EarlyStoppingCallback(monitor='val_accuracy', mode='max', patience=10),
+        EarlyStoppingCallback(monitor='val_accuracy', mode='max', patience=None),
         save_callback,
         tensorboard_callback
     ]
