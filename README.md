@@ -29,12 +29,12 @@ The project aims to **classify** types of **skin cancer** and **predict** which 
 
 ## 2. Environment
 ### 2.1 Package Version
-  Python=3.9\n
-  Tensorflow=2.6.0\n
-  CUDA=11.2\n
-  cuDNN=8.1\n
-  Keras=2.6.0\n
-  Pandas=1.1.3\n
+  Python=3.9
+  Tensorflow=2.6.0
+  CUDA=11.2
+  cuDNN=8.1
+  Keras=2.6.0
+  Pandas=1.1.3
   Numpy=1.19.5
 
 ## 3. Label Interpretion
