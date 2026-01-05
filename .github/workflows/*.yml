@@ -1,0 +1,15 @@
+on:
+  pull_request:
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Super-Linter
+      # You may pin to the exact commit or the version.
+      # uses: super-linter/super-linter@b92721f792f381cedc002ecdbb9847a15ece5bb8
+      uses: super-linter/super-linter@v7.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
